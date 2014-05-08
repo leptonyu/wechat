@@ -92,7 +92,7 @@ func (r *Respond) reply(message string) {
 	head := fmt.Sprintf(`<xml><ToUserName><![CDATA[%s]]></ToUserName>
 <FromUserName><![CDATA[%s]]></FromUserName>
 <CreateTime>%d</CreateTime>%v</xml>`, r.ToUserName, r.FromUserName, time.Now().Unix(), message)
-	r.wechat.atrw.SaveReply(head)
+	go r.wechat.atrw.SaveReply(head)
 	r.Writer.Write([]byte(head))
 }
 

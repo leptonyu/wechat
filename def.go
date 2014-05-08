@@ -132,7 +132,7 @@ func (w *WeChat) getAccessToken() (AccessToken, error) {
 	if err == nil {
 		res.Token = xxx.Token
 		res.ExpireTime = time.Now().Add(time.Duration(xxx.Expire) * time.Second)
-		w.atrw.WriteAccessToken(res)
+		go w.atrw.WriteAccessToken(res)
 	}
 	return res, err
 }
