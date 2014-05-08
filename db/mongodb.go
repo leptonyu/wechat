@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"github.com/leptonyu/wechat"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
@@ -115,7 +114,7 @@ func (m *MongoStorage) WriteAccessToken(at wechat.AccessToken) error {
 				Token:  at.Token,
 				Expire: at.ExpireTime,
 			})
-		fmt.Println(err)
+		//		fmt.Println(err)
 		return err
 	})
 }

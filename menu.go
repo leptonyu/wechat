@@ -46,6 +46,7 @@ func (wc *WeChat) CreateMenu(menu *Menu) error {
 	if data, err := json.Marshal(menu); err != nil {
 		return err
 	} else {
+		//fmt.Println(string(data))
 		return wc.post(WeChatMenuCreate, data, nil)
 	}
 }
