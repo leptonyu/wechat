@@ -5,7 +5,9 @@ import (
 )
 
 func TestUser(t *testing.T) {
-	wc, err := NewWeChatInMem(`wxd`, `848`, `PRH`)
+
+	x := NewLocalMongo("api")
+	wc, err := x.GetWeChat()
 	if err != nil {
 		t.Error(err)
 		return

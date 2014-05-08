@@ -1,7 +1,6 @@
-package db
+package wechat
 
 import (
-	"github.com/leptonyu/wechat"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"time"
@@ -12,20 +11,23 @@ type MongoStorage struct {
 	password string
 	host     string
 	database string
-	wc       *wechat.WeChat
+	wc       *WeChat
 }
 
 //Query in database
 type QueryFunc func(*mgo.Database) error
 
 //Using MongoDB to create WeChat struct
-func New(username, password, host, database string) *MongoStorage {
+func NewMongo(username, password, host, database string) *MongoStorage {
 	return &MongoStorage{
 		username: username,
 		password: password,
 		host:     host,
 		database: database,
 	}
+}
+func NewLocalMongo(database string) *MongoStorage {
+	return NewMongo("", "", "", database)
 }
 
 //Standard query of mongodb
@@ -49,10 +51,10 @@ func (m *MongoStorage) Query(qf QueryFunc) error {
 	defer session.Close()
 	return qf(session.DB("wechat_" + m.database))
 }
-func (m *MongoStorage) GetWeChat() (*wechat.WeChat, error) {
+func (m *MongoStorage) GetWeChat() (*WeChat, error) {
 	if m.wc == nil {
 		var err error
-		m.wc, err = wechat.New(m)
+		m.wc, err = New(m)
 		if err != nil {
 			return nil, err
 		}
@@ -92,8 +94,8 @@ func (m *MongoStorage) SaveReply(r string) {
 		return err
 	})
 }
-func (m *MongoStorage) ReadAccessToken() (wechat.AccessToken, error) {
-	at := wechat.AccessToken{}
+func (m *MongoStorage) ReadAccessToken() (AccessToken, error) {
+	at := AccessToken{}
 	err := m.Query(func(d *mgo.Database) error {
 		a := access{}
 		if err := d.C("wechat").Find(bson.M{"name": "accesstoken"}).One(&a); err != nil {
@@ -106,7 +108,7 @@ func (m *MongoStorage) ReadAccessToken() (wechat.AccessToken, error) {
 	return at, err
 }
 
-func (m *MongoStorage) WriteAccessToken(at wechat.AccessToken) error {
+func (m *MongoStorage) WriteAccessToken(at AccessToken) error {
 	return m.Query(func(d *mgo.Database) error {
 		_, err := d.C("wechat").Upsert(bson.M{"name": "accesstoken"},
 			&access{
@@ -119,7 +121,7 @@ func (m *MongoStorage) WriteAccessToken(at wechat.AccessToken) error {
 	})
 }
 
-func (m *MongoStorage) SaveRequest(r *wechat.Request) {
+func (m *MongoStorage) SaveRequest(r *Request) {
 	m.Query(func(d *mgo.Database) error {
 		d.C("request").Insert(r)
 		return nil

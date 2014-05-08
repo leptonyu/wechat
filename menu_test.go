@@ -5,9 +5,8 @@ import (
 )
 
 func TestMenu(t *testing.T) {
-	wc, err := NewWeChatInMem(`appid`,
-		`secret`,
-		`token`)
+	x := NewLocalMongo("api")
+	wc, err := x.GetWeChat()
 
 	if err != nil {
 		t.Error(err)

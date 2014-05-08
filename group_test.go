@@ -4,12 +4,17 @@ import (
 	"testing"
 )
 
-func TestDef(t *testing.T) {
+func estGroup(t *testing.T) {
 	x := NewLocalMongo("api")
 	wc, err := x.GetWeChat()
 	if err != nil {
 		t.Error(err)
-	} else {
-		t.Log(wc.getAccessToken())
+		return
 	}
+	m, err := wc.CreateGroup("你好")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log(m)
 }
