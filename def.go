@@ -6,7 +6,6 @@ package wechat
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -65,19 +64,17 @@ type WeChat struct {
 }
 
 //Register Route
-func (w *WeChat) Register(pattern, keyword string, handler HandleFunc) {
-	reg, err := regexp.Compile(pattern)
-	if err != nil {
-		panic(err)
+func (w *WeChat) RegisterHandler(handler HandleFunc, patterns ...string) {
+	for _, pattern := range patterns {
+		reg, err := regexp.Compile(pattern)
+		if err != nil {
+			panic(err)
+		}
+		w.routes = append(w.routes, &Route{
+			Regex:  reg,
+			Handle: handler,
+		})
 	}
-	if !reg.MatchString(keyword) {
-		panic(errors.New("Pattern " + pattern + " must match the keyword " + keyword + "!"))
-	}
-	w.routes = append(w.routes, &Route{
-		Regex:   reg,
-		Keyword: keyword,
-		Handle:  handler,
-	})
 }
 
 //Create wechat struct.
@@ -99,9 +96,8 @@ type HandleFunc func(RespondWriter, *Request) error
 
 //Route of request handler
 type Route struct {
-	Regex   *regexp.Regexp //Regexp of words that use this Handle
-	Keyword string         //Basic Keyword
-	Handle  HandleFunc     // Handle function
+	Regex  *regexp.Regexp //Regexp of words that use this Handle
+	Handle HandleFunc     // Handle function
 }
 
 // Access Token, we need this to verify the identity with WeChat server.
@@ -116,6 +112,7 @@ type Storage interface {
 	ReadAccessToken() (AccessToken, error)                // Read access token from storage
 	WriteAccessToken(AccessToken) error                   //Write access token to storage
 	SaveRequest(*Request)                                 // Save WeChat request
+	SaveReply(string)                                     // Save WeChat reply
 	WeChatInfo() (appid, secret, token string, err error) //Fetch Basic WeChat Info
 }
 

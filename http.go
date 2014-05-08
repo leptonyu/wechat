@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"sort"
-	"strconv"
 	"time"
 )
 
@@ -85,36 +84,31 @@ type Respond struct {
 }
 
 func (r *Respond) ReplyText(text string) {
-	reply(r.Writer,
-		`<xml>%s<MsgType><![CDATA[text]]></MsgType><Content><![CDATA[%s]]></Content></xml>`,
-		r.ToUserName, r.FromUserName, text)
+	r.reply(
+		`<MsgType><![CDATA[text]]></MsgType><Content><![CDATA[` + text + `]]></Content>`)
 }
 
-func reply(w http.ResponseWriter, pattern, to, from string, left ...string) {
-	head := []string{fmt.Sprintf(`<ToUserName><![CDATA[%s]]></ToUserName>
+func (r *Respond) reply(message string) {
+	head := fmt.Sprintf(`<xml><ToUserName><![CDATA[%s]]></ToUserName>
 <FromUserName><![CDATA[%s]]></FromUserName>
-<CreateTime>%d</CreateTime>`, to, from, time.Now().Unix())}
-	for _, str := range left {
-		head = append(head, str)
-	}
-	w.Write([]byte(fmt.Sprintf(pattern, head)))
+<CreateTime>%d</CreateTime>%v</xml>`, r.ToUserName, r.FromUserName, time.Now().Unix(), message)
+	r.wechat.atrw.SaveReply(head)
+	r.Writer.Write([]byte(head))
 }
 
 func (r *Respond) ReplyImage(mediaId string) {
-	reply(r.Writer,
-		`<xml>%s<MsgType><![CDATA[image]]></MsgType><Image><MediaId><![CDATA[%s]]></MediaId></Image></xml>`,
-		r.ToUserName, r.FromUserName, mediaId)
+	r.reply(
+		`<![CDATA[image]]></MsgType><Image><MediaId><![CDATA[` + mediaId + `]]></MediaId></Image>`)
 }
 func (r *Respond) ReplyVoice(mediaId string) {
-	reply(r.Writer,
-		`<xml>%s<MsgType><![CDATA[voice]]></MsgType><Voice><MediaId><![CDATA[%s]]></MediaId></Voice></xml>`,
-		r.ToUserName, r.FromUserName, mediaId)
+	r.reply(
+		`<MsgType><![CDATA[voice]]></MsgType><Voice><MediaId><![CDATA[` + mediaId + `]]></MediaId></Voice>`)
 }
 
 func (r *Respond) ReplyVideo(mediaId, title, desp string) {
-	reply(r.Writer,
-		`<xml>%s<MsgType><![CDATA[video]]></MsgType><Video><MediaId><![CDATA[%s]]></MediaId><Title><![CDATA[%s]]></Title><Description><![CDATA[%s]]></Description></Video></xml>`,
-		r.ToUserName, r.FromUserName, mediaId, title, desp)
+	r.reply(
+		fmt.Sprintf(`<MsgType><![CDATA[video]]></MsgType><Video><MediaId><![CDATA[%s]]></MediaId><Title><![CDATA[%s]]></Title><Description><![CDATA[%s]]></Description></Video>`,
+			mediaId, title, desp))
 }
 
 type Music struct {
@@ -126,9 +120,9 @@ type Music struct {
 }
 
 func (r *Respond) ReplyMusic(music *Music) {
-	reply(r.Writer,
-		`<xml>%s<MsgType><![CDATA[music]]></MsgType><Music><Title><![CDATA[%s]]></Title><Description><![CDATA[%s]]></Description><MusicUrl><![CDATA[%s]]></MusicUrl><HQMusicUrl><![CDATA[%s]]></HQMusicUrl><ThumbMediaId><![CDATA[%s]]></ThumbMediaId></Music></xml>`,
-		r.ToUserName, r.FromUserName, music.Title, music.Description, music.MusicUrl, music.HQMusicUrl, music.ThumbMediaId)
+	r.reply(
+		fmt.Sprintf(`<MsgType><![CDATA[music]]></MsgType><Music><Title><![CDATA[%s]]></Title><Description><![CDATA[%s]]></Description><MusicUrl><![CDATA[%s]]></MusicUrl><HQMusicUrl><![CDATA[%s]]></HQMusicUrl><ThumbMediaId><![CDATA[%s]]></ThumbMediaId></Music>`,
+			music.Title, music.Description, music.MusicUrl, music.HQMusicUrl, music.ThumbMediaId))
 }
 
 type Article struct {
@@ -144,9 +138,9 @@ func (r *Respond) ReplyNews(articles []Article) {
 		ctx += fmt.Sprintf(`<item><Title><![CDATA[%s]]></Title> <Description><![CDATA[%s]]></Description><PicUrl><![CDATA[%s]]></PicUrl><Url><![CDATA[%s]]></Url></item>`,
 			article.Title, article.Description, article.PicUrl, article.Url)
 	}
-	reply(r.Writer,
-		`<xml>%s<MsgType><![CDATA[news]]></MsgType><ArticleCount>%d</ArticleCount><Articles>%s</Articles></xml>`,
-		r.ToUserName, r.FromUserName, strconv.Itoa(len(articles)), ctx)
+	r.reply(
+		fmt.Sprintf(`<MsgType><![CDATA[news]]></MsgType><ArticleCount>%d</ArticleCount><Articles>%s</Articles>`,
+			len(articles), ctx))
 }
 
 //Reply messages to wechat

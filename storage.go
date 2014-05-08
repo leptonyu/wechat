@@ -35,6 +35,9 @@ func (s *MemStorage) WriteAccessToken(at AccessToken) error {
 	s.at = &at
 	return nil
 }
+func (s *MemStorage) SaveReply(r string) {
+	log.Println(r)
+}
 func (s *MemStorage) SaveRequest(r *Request) {
 	log.Println(r)
 }

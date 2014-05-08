@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"github.com/leptonyu/wechat"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
@@ -12,6 +13,7 @@ type MongoStorage struct {
 	password string
 	host     string
 	database string
+	wc       *wechat.WeChat
 }
 
 //Query in database
@@ -49,7 +51,14 @@ func (m *MongoStorage) Query(qf QueryFunc) error {
 	return qf(session.DB("wechat_" + m.database))
 }
 func (m *MongoStorage) GetWeChat() (*wechat.WeChat, error) {
-	return wechat.New(m)
+	if m.wc == nil {
+		var err error
+		m.wc, err = wechat.New(m)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return m.wc, nil
 }
 
 type storeWeChat struct {
@@ -78,6 +87,12 @@ type access struct {
 	Expire time.Time
 }
 
+func (m *MongoStorage) SaveReply(r string) {
+	m.Query(func(d *mgo.Database) error {
+		err := d.C("reply").Insert(bson.M{"value": r})
+		return err
+	})
+}
 func (m *MongoStorage) ReadAccessToken() (wechat.AccessToken, error) {
 	at := wechat.AccessToken{}
 	err := m.Query(func(d *mgo.Database) error {
@@ -95,11 +110,12 @@ func (m *MongoStorage) ReadAccessToken() (wechat.AccessToken, error) {
 func (m *MongoStorage) WriteAccessToken(at wechat.AccessToken) error {
 	return m.Query(func(d *mgo.Database) error {
 		_, err := d.C("wechat").Upsert(bson.M{"name": "accesstoken"},
-			access{
+			&access{
 				Name:   "accesstoken",
 				Token:  at.Token,
 				Expire: at.ExpireTime,
 			})
+		fmt.Println(err)
 		return err
 	})
 }
