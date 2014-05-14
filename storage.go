@@ -12,6 +12,8 @@ type Storage interface {
 	SaveRequest(*Request)                                 // Save WeChat request
 	SaveReply(string)                                     // Save WeChat reply
 	WeChatInfo() (appid, secret, token string, err error) //Fetch Basic WeChat Info
+	GetUserName(string) (name, admin string, err error)   //Fetch Username of id,if username is not exists, return id
+	SetUserName(id, name, admin string)                   //Set Username of id,if username is not exists, return id
 }
 
 //Create WeChat using in memory storage.
@@ -31,6 +33,7 @@ type MemStorage struct {
 	secret string
 	token  string
 	at     *AccessToken
+	idname map[string]*user
 }
 
 func (s *MemStorage) ReadAccessToken() (AccessToken, error) {
@@ -52,4 +55,26 @@ func (s *MemStorage) SaveRequest(r *Request) {
 }
 func (s *MemStorage) WeChatInfo() (appid, secret, token string, err error) {
 	return s.appid, s.secret, s.token, nil
+}
+
+type user struct {
+	Id    string
+	Name  string
+	Admin string
+}
+
+func (s *MemStorage) GetUserName(id string) (name, admin string, err error) {
+	u, ok := s.idname[id]
+	if ok {
+		return u.Name, u.Admin, nil
+	} else {
+		return "", "", errors.New("Id not have name")
+	}
+}
+func (s *MemStorage) SetUserName(id, name, admin string) {
+	s.idname[id] = &user{
+		Id:    id,
+		Name:  name,
+		Admin: admin,
+	}
 }

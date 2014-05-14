@@ -1,12 +1,12 @@
 package wechat
 
 import (
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
+	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
 	"time"
 )
 
-type MongoStorage struct {
+type MySQLStorage struct {
 	username string
 	password string
 	host     string
@@ -15,24 +15,24 @@ type MongoStorage struct {
 }
 
 //Query in database
-type QueryFunc func(*mgo.Database) error
+type QueryFunc func(*sql.DB) error
 
 //Using MongoDB to create WeChat struct
-func NewMongo(username, password, host, database string) *MongoStorage {
-	return &MongoStorage{
+func NewMySQL(username, password, host, database string) *MySQLStorage {
+	return &MySQLStorage{
 		username: username,
 		password: password,
 		host:     host,
 		database: database,
 	}
 }
-func NewLocalMongo(database string) *MongoStorage {
-	return NewMongo("", "", "", database)
+func NewLocalMySQL(database string) *MySQLStorage {
+	return NewMySQL("", "", "", database)
 }
 
 //Standard query of mongodb
-func (m *MongoStorage) Query(qf QueryFunc) error {
-	url := "mongodb://"
+func (m *MySQLStorage) Query(qf QueryFunc) error {
+	url := ""
 	if m.username != "" {
 		url += m.username
 		if m.password != "" {
@@ -43,15 +43,15 @@ func (m *MongoStorage) Query(qf QueryFunc) error {
 	if m.host == "" {
 		m.host = "localhost"
 	}
-	url += m.host
-	session, err := mgo.Dial(url)
+	url += m.host + "/" + m.database
+	db, err := sql.Open("mysql", url)
 	if err != nil {
 		return err
 	}
-	defer session.Close()
-	return qf(session.DB("wechat_" + m.database))
+	defer db.Close()
+	return qf(db)
 }
-func (m *MongoStorage) GetWeChat() (*WeChat, error) {
+func (m *MySQLStorage) GetWeChat() (*WeChat, error) {
 	if m.wc == nil {
 		var err error
 		m.wc, err = New(m)
@@ -69,8 +69,9 @@ type storeWeChat struct {
 	Token  string
 }
 
-func (m *MongoStorage) Init(appid, secret, token string) error {
-	return m.Query(func(d *mgo.Database) error {
+func (m *MySQLStorage) Init(appid, secret, token string) error {
+	return m.Query(func(d *sql.DB) error {
+		d.Exec("REPLACE "
 		_, err := d.C("wechat").Upsert(bson.M{"name": "wechat"},
 			storeWeChat{
 				Name:   "wechat",
@@ -88,13 +89,13 @@ type access struct {
 	Expire time.Time
 }
 
-func (m *MongoStorage) SaveReply(r string) {
+func (m *MySQLStorage) SaveReply(r string) {
 	m.Query(func(d *mgo.Database) error {
 		err := d.C("reply").Insert(bson.M{"value": r})
 		return err
 	})
 }
-func (m *MongoStorage) ReadAccessToken() (AccessToken, error) {
+func (m *MySQLStorage) ReadAccessToken() (AccessToken, error) {
 	at := AccessToken{}
 	err := m.Query(func(d *mgo.Database) error {
 		a := access{}
@@ -108,7 +109,7 @@ func (m *MongoStorage) ReadAccessToken() (AccessToken, error) {
 	return at, err
 }
 
-func (m *MongoStorage) WriteAccessToken(at AccessToken) error {
+func (m *MySQLStorage) WriteAccessToken(at AccessToken) error {
 	return m.Query(func(d *mgo.Database) error {
 		_, err := d.C("wechat").Upsert(bson.M{"name": "accesstoken"},
 			&access{
@@ -121,14 +122,14 @@ func (m *MongoStorage) WriteAccessToken(at AccessToken) error {
 	})
 }
 
-func (m *MongoStorage) SaveRequest(r *Request) {
+func (m *MySQLStorage) SaveRequest(r *Request) {
 	m.Query(func(d *mgo.Database) error {
 		d.C("request").Insert(r)
 		return nil
 	})
 }
 
-func (m *MongoStorage) WeChatInfo() (appid, secret, token string, err error) {
+func (m *MySQLStorage) WeChatInfo() (appid, secret, token string, err error) {
 	err = m.Query(func(d *mgo.Database) error {
 		x := storeWeChat{}
 		if err := d.C("wechat").Find(bson.M{"name": "wechat"}).One(&x); err != nil {
@@ -141,29 +142,4 @@ func (m *MongoStorage) WeChatInfo() (appid, secret, token string, err error) {
 		return nil
 	})
 	return appid, secret, token, err
-}
-
-func (s *MongoStorage) GetUserName(id string) (name, admin string, err error) {
-	u := user{}
-	if err := s.Query(func(d *mgo.Database) error {
-		return d.C("user").Find(bson.M{"id": id}).One(&u)
-	}); err == nil {
-		return u.Name, u.Admin, nil
-	} else {
-		return "", "", err
-	}
-}
-func (s *MongoStorage) SetUserName(id, name, admin string) {
-	u := user{}
-	s.Query(func(d *mgo.Database) error {
-		if err := d.C("user").Find(bson.M{"id": id}).One(&u); err == nil {
-			u.Name = name
-		} else {
-			u.Id = id
-			u.Name = name
-			u.Admin = admin
-		}
-		_, err := d.C("user").Upsert(bson.M{"id": id}, &u)
-		return err
-	})
 }

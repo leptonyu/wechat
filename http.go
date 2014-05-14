@@ -142,9 +142,13 @@ func (r *Respond) ReplyNews(articles []Article) {
 		fmt.Sprintf(`<MsgType><![CDATA[news]]></MsgType><ArticleCount>%d</ArticleCount><Articles>%s</Articles>`,
 			len(articles), ctx))
 }
+func (r *Respond) FromUserId() string {
+	return r.ToUserName
+}
 
 //Reply messages to wechat
 type RespondWriter interface {
+	FromUserId() string                            //Get Request
 	ReplyText(text string)                         //Reply text message to wechat
 	ReplyImage(mediaId string)                     //Reply text message to wechat
 	ReplyVoice(mediaId string)                     //Reply text message to wechat
@@ -178,6 +182,7 @@ type Request struct {
 	Longitude    float32 `json:",omitempty"`
 	Precision    float32 `json:",omitempty"`
 	Recognition  string  `json:",omitempty"`
+	UserName     string  `json:"-"`
 }
 
 const (
